@@ -7,20 +7,31 @@ import objYouTube as yt
 
 
 cancion = st.text_input("Busque una canción")
-NuevaBusqueda = busqueda.Busqueda(cancion)
-videos = NuevaBusqueda.DevolverListado()
+if cancion:
+    NuevaBusqueda = busqueda.Busqueda(cancion)
+    videos = NuevaBusqueda.DevolverListado()
+    
+    st.dataframe(NuevaBusqueda.Dataframe)
+    st.dataframe(NuevaBusqueda.Minitaturas)
+    st.image(NuevaBusqueda.Minitaturas["thumbnails"][0])
 
-opcion = st.selectbox("elija",videos.values())
-key = [key for key, value in videos.items() if value == opcion]
+    print(NuevaBusqueda.Dataframe.head())
+    opcion = st.selectbox("elija",videos.values())
 
-NuevoLink = yt.objYouTube(NuevaBusqueda.DevolverLink(key))
-NuevoLink.Stream = NuevoLink.Audio_Streams()
+    st.text(opcion)
 
-eleccion = st.select_slider("Elije", NuevoLink.Stream)
+    if opcion:
+        key = [key for key, value in videos.items() if value == opcion]
 
-if st.button("Elegir"):
-    NuevoLink.Audio = NuevoLink.Bajar_Audio()
-    st.audio(NuevoLink.Audio)
+        NuevoLink = yt.objYouTube(NuevaBusqueda.DevolverLink(key))
+        NuevoLink.Stream = NuevoLink.Audio_Streams()
+        st.text(NuevoLink.Duración)
+
+    #eleccion = st.selectbox("Elije", NuevoLink.Stream)
+
+        if st.button("Elegir"):
+            NuevoLink.Bajar_Audio()
+            st.audio(NuevoLink.Audio)
 
 
 

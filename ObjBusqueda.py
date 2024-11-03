@@ -5,6 +5,7 @@ class Busqueda:
     def __init__(self, prompt):
         self.Prompt = prompt
         self.Dataframe = self.BuscarEnYouTube()
+        self.Minitaturas = pd.DataFrame(self.Dataframe["thumbnails"].apply(lambda x: x[-1]['url']))
 
     def BuscarEnYouTube(self):
         df = pd.DataFrame(VideosSearch(self.Prompt, limit=10).result()["result"])
