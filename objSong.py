@@ -10,3 +10,4 @@ class Song:
     def get_duration(self):
         audio = MP3(os.path.join("Cache", self.filename))
         return audio.info.length
+    
