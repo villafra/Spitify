@@ -2,29 +2,25 @@ import os
 import objSong as song
 
 class Playlist:
-    def __init__(self, directory):
-        self.Playlist = self.Cargar_Playlist(directory)
+    def __init__(self):
+        self.State = self.Cargar_State()
+        self.Playlist = None
     
-    def Cargar_Playlist(self,directory):
-        archivos = os.listdir(directory)
-        canciones = [song.Song(f) for f in archivos if f.endswith(".mp3")]
-        return canciones
-    
-    def Agregar_Cancion(self, nombre,directory):
-            for f in os.listdir(directory):
-                 if f == f"{nombre}.og":
-                      Nueva_Cancion = song.Song(f)
-                      self.Playlist.append(Nueva_Cancion)
-                      break
-    def Devolver_Index(self, nombre, directory):
-         self.imprimir()
-         for i, cancion in enumerate(self.Playlist):
-              if cancion.filename == f"{nombre}.mp3":
-                   return i 
-    def imprimir(self):
-        import os
-        print("Directorio de trabajo actual:", os.getcwd())
-        directory = "C:\\Users\\Franc\\source\\Spitify\\Cache"
-        print("Archivos en Cache:")
-        for f in os.listdir(directory):
-            print(f)
+    def Cargar_State(self):
+        ruta = "Cache/state.bin"
+        try:
+            with open(ruta, "rb") as f:
+                state = f.read().decode("utf-8")
+                return state.splitlines()
+        except FileNotFoundError:
+            with open(ruta, "wb") as f:
+                pass
+            return []
+        except Exception as e:
+            return []
+        
+    def Cargar_Playlist(self):
+        pass
+
+    def Agregar_Cancion(self,url):
+        self.State.append(url)

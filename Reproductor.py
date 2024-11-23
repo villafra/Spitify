@@ -1,22 +1,14 @@
 import flet as ft
-import pygame
-import os
-from mutagen.mp3 import MP3
 import asyncio
 import objSong as song
 import Pantalla
 import ObjBusqueda as Bsq
 import objYouTube as Yt
 import objPlaylist as pl
-import time
 import traceback
-import Watcher
-import atexit
+from yt_dlp import YoutubeDL
+import vlc
 
-
-
-is_playing = False
-progress_task = None
 
 async def main(page: ft.Page):
     page.title = "Reproductor de Música"
@@ -27,101 +19,84 @@ async def main(page: ft.Page):
     centrar = Pantalla.Pantalla(page.window.width, page.window.height)
     page.window.left = centrar.X_Pos
     page.window.top = centrar.Y_Pos
-    pg = pygame.mixer
-    pg.init()
-    playlist = pl.Playlist("Cache")
+    playlist =pl.Playlist()
+    player = None
     NuevaBusqueda = None
-    watcher =  None
     Cancion = None
-    page.on_close = lambda e: RegistrarCierre()
+
     
 
     #funciones
-    def RegistrarCierre():
-        global Cancion
-        nonlocal current_song_index
-        Cancion.Limpiar_Cache(playlist.Playlist[current_song_index].filename)    
+   
+    async def update_progress():
+            global player
+            global Cancion
+            print(player.get_state())
+            while True:
+                if player is not None:
+                    if player.get_state() == vlc.State.Playing :
+                        current_time = player.get_time() /1000
+                        progress_bar.value = current_time / Cancion.duration
+                        current_time_text.value = format_time(current_time)
+                        page.update()
+                    await asyncio.sleep(1) 
 
-    def Iniciar():
-        nonlocal pg
-        nonlocal current_song_index
-        current_song_index = 0
-        pygame.init()
-        pg.init()
-        #playlist.Playlist = playlist.Cargar_Playlist("Cache")
-        update_song_info()
-        #time.sleep(2)
-        #if pg.music.get_pos()== -1:
-            #load_song()
-            #pg.music.play()  
-        #else:
-            #pg.music.unpause()
-        #play_button.icon = ft.icons.PAUSE
-        page.update()
 
-    def Detener():
-        stop(centrar)
-        nonlocal pg
-        pg.quit()
-        pygame.quit()
-    
     def load_song():
-        nonlocal pg
-        directorio_trabajo = os.getcwd() + f"\Cache"
-        pathjoin = os.path.join(directorio_trabajo, playlist.Playlist[current_song_index].filename)
-        pg.music.load(pathjoin)
-    
-    def load_newsong(nombre):
-        playlist.Playlist = playlist.Cargar_Playlist("Cache")
-        nonlocal pg
-        directorio_trabajo = os.getcwd() + f"\Cache"
-        pathjoin = os.path.join(directorio_trabajo,f"{nombre}.mp3" )
-        global watcher
-        while watcher.check_for_new_file() == False:
-            time.sleep(1)
-        page.update()
+        global Cancion
+        global player
+        playing = False
+        try:
+            if player.get_state() == vlc.State.Playing:
+                player.stop()
+                playing = True
+                player = None
+        except:
+            pass
+        for cancion in playlist.State:
+            print(cancion)
+        Cancion = song.Song(playlist.State[current_song_index])
+        player = vlc.MediaPlayer(Cancion.Url)
+        if playing:
+            player.play()
 
-
-    
+        
     def play_Pause(e):
-        nonlocal pg
-        if pg.music.get_busy():
-            pg.music.pause()
+        global player
+        state = player.get_state()
+        print(state)
+        if state == vlc.State.Playing:
+            player.pause()
             play_button.icon = ft.icons.PLAY_ARROW
+        elif state == vlc.State.Paused:
+            player.play()
+            play_button.icon = ft.icons.PAUSE
+        elif state == vlc.State.NothingSpecial:
+            player.play()
+            play_button.icon = ft.icons.PAUSE
         else:
-            if pg.music.get_pos()== -1:
-                load_song()
-                pg.music.play()   
-            else:
-                pg.music.unpause()
+            player.play()
             play_button.icon = ft.icons.PAUSE
         page.update()
     
     def stop(e):
-        nonlocal pg
-        if pg.music.get_busy():
-            pg.music.stop()
-            
-        elif pg.music.get_pos()!= -1:
-            pg.music.stop()
+        global player
+        player.stop()
         play_button.icon = ft.icons.PLAY_ARROW
         page.update()
-        RegistrarCierre()
     
     def change_song(e):
         nonlocal current_song_index
-        current_song_index = (current_song_index+e.control.data) % len(playlist.Playlist)
+        current_song_index = (current_song_index+e.control.data) % len(playlist.State)
         load_song()
-        nonlocal pg
-        pg.music.play()
         update_song_info()
         play_button.icon = ft.icons.PAUSE
         page.update()
 
     def update_song_info():
-        song = playlist.Playlist[current_song_index]
-        song_info.value = f"{song.title}"
-        duration.value = format_time(song.duration)
+        global Cancion
+        song_info.value = Cancion.Name
+        duration.value = format_time(Cancion.duration)
         progress_bar.value = 0.0
         current_time_text.value = "00:00"
         page.update()
@@ -129,56 +104,7 @@ async def main(page: ft.Page):
     def format_time(seconds):
         minutes, seconds = divmod(int(seconds),60)
         return f"{minutes:02d}:{seconds:02d}"
-    
-    async def update_progress():
-        nonlocal pg
-        while True:
-            if pg.get_init() is not None:
-                if pg.music.get_busy():
-                    current_time = pygame.mixer.music.get_pos() /1000
-                    progress_bar.value = current_time / playlist.Playlist[current_song_index].duration
-                    current_time_text.value = format_time(current_time)
-                    page.update()
-                await asyncio.sleep(1)
-            await asyncio.sleep(1)
 
-    # async def update_progress():
-    #     global is_playing
-    #     while is_playing:
-    #         if pygame.mixer.music.get_busy():
-    #             current_time = pygame.mixer.music.get_pos() / 1000
-    #             progress_bar.value = current_time / playlist.Playlist[current_song_index].duration
-    #             current_time_text.value = format_time(current_time)
-    #             page.update()
-    #         await asyncio.sleep(1)
-
-    # async def start_progress_update():
-    #     global is_playing, progress_task
-    #     if not is_playing:  
-    #         is_playing = True
-    #         progress_task = asyncio.create_task(update_progress())  
-
-    # async def stop_progress_update():
-    #     global is_playing, progress_task
-    #     if is_playing:  
-    #         is_playing = False
-    #         if progress_task:
-    #             progress_task.cancel()  
-    #             try:
-    #                 await progress_task
-    #             except asyncio.CancelledError:
-    #                 pass  
-    #         progress_task = None 
-    
-    # def Detener_Asyncio():
-    #     try:
-    #         loop = asyncio.get_running_loop()
-    #         loop.close()
-    #     except:
-    #         pass
-
-    def ver_cancion(e):
-        print(f"Se ha hecho clic en la canción: {e.control.data}")
 
     def Buscar_Canciones(e):
         global NuevaBusqueda
@@ -228,20 +154,18 @@ async def main(page: ft.Page):
         )
         page.update()
 
-    def Cargar_Cancion(e):
 
+    def Cargar_Cancion(e):
         try:
             global NuevaBusqueda
-            nonlocal pg
+            global Cancion
             listado = NuevaBusqueda.DevolverListado()
             key = [key for key, value in listado.items() if value == e.control.data]
-            global Cancion
-            Cancion = Yt.objYouTube(NuevaBusqueda.DevolverLink(key))
-            global watcher
-            watcher = Watcher.DirectoryWatcher()
-            watcher.start()
-            Cancion.Bajar_Audio(nombre=Cancion.Titulo)
-            load_newsong(nombre=Cancion.Titulo)
+            playlist.Agregar_Cancion(NuevaBusqueda.DevolverLink(key))
+            
+            for linea in playlist.State:
+                print(linea)
+            
             
         except Exception as ex:
             error = traceback.format_exc()
@@ -296,9 +220,10 @@ async def main(page: ft.Page):
                     expand=False
                     )
     )
-    if playlist.Playlist:
+    if playlist.State:
         Actualizar()
         await update_progress()
+        #pass
     else:
         song_info =  "No se encontraron canciones en la carpeta de canciones"
         page.update()
