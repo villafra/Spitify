@@ -8,7 +8,7 @@ class Busqueda:
         self.Minitaturas = pd.DataFrame(self.Dataframe["thumbnails"].apply(lambda x: x[-1]['url']))
 
     def BuscarEnYouTube(self):
-        df = pd.DataFrame(VideosSearch(self.Prompt, limit=10).result()["result"])
+        df = pd.DataFrame(VideosSearch(self.Prompt, limit=15).result()["result"])
         return df
     
     def DevolverListado(self):

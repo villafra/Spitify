@@ -2,7 +2,7 @@ from screeninfo import get_monitors
 
 class Pantalla:
     def __init__(self, width, height):
-        self.Monitor = get_monitors()[1]
+        self.Monitor = get_monitors()[0]
         self.Screen_width = self.Monitor.width
         self.Screen_height = self.Monitor.height
         self.X_Pos = self.Get_X(width)

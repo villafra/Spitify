@@ -12,4 +12,13 @@ class Song:
         self.duration = info['duration']
         self.view_count = info['view_count']
         self.like_count = info['like_count']
+
+
+class EventMock:
+    def __init__(self, control):
+        self.control = control
+
+class MockControl:
+    def __init__(self, data):
+        self.data = data
     

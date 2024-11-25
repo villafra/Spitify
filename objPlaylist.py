@@ -22,5 +22,20 @@ class Playlist:
     def Cargar_Playlist(self):
         pass
 
-    def Agregar_Cancion(self,url):
-        self.State.append(url)
+    def Agregar_Cancion(self, url, index=None):
+        if index is not None:
+            self.State.insert(index,url)
+        else:
+            self.State.append(url)
+        self.Guardar_State()
+    
+    def Guardar_State(self):
+        ruta = "Cache/state.bin"
+        try:
+             with open(ruta, "wb") as f:
+                 for url in self.State:
+                    f.write((url + "\n").encode("utf-8"))
+        except Exception as ex:
+            print(ex)
+
+                 
