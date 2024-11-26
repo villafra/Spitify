@@ -13,7 +13,7 @@ import vlc
 async def main(page: ft.Page):
     page.title = "Reproductor de Música"
     page.bgcolor = ft.colors.BLUE_GREY_900
-    page.window_maximized = True
+    page.window.maximized = True
     #.padding = 20
     page.window.width = 700
     page.window.height = 800
@@ -128,11 +128,22 @@ async def main(page: ft.Page):
         duration.value = format_time(Cancion.duration)
         progress_bar.value = 0.0
         current_time_text.value = "00:00"
+        Miniatura.src = Cancion.thumbnail
+        Nombre.value = Cancion.Name
+        Likes.value = format_number(Cancion.like_count)
+        Views.value = format_number(Cancion.view_count)
         page.update()
     
     def format_time(seconds):
         minutes, seconds = divmod(int(seconds),60)
         return f"{minutes:02d}:{seconds:02d}"
+    
+    def format_number(num):
+        if num >= 1_000_000: 
+                return f"{num / 1_000_000:.1f}M"
+        elif num >= 1_000: 
+                return f"{num / 1_000:.1f}K"
+        return str(num)
 
 
     def Buscar_Canciones(e):
@@ -202,7 +213,7 @@ async def main(page: ft.Page):
             scroll=ft.ScrollMode.AUTO,
         )
         page.update()
-
+    
 
     def Cargar_Cancion(e):
         try:
@@ -248,15 +259,18 @@ async def main(page: ft.Page):
     volume_button = ft.IconButton(icon=ft.icons.VOLUME_UP, on_click=Mute,icon_color=ft.colors.WHITE)
     volume_slider = ft.Slider(min=0, max=1, value=1, divisions=10,width=200, on_change_end=set_volume,active_color=ft.colors.WHITE)
     Busqueda = ft.TextField(label="Con qué te vas a deleitar?", hint_text="Escriba un artista o canción.", width=500 ,icon=ft.icons.SEARCH,on_submit=Buscar_Canciones)
+    Miniatura = ft.Image(width=100, height=100,fit=ft.Image.left)
+    Nombre = ft.Text(size=12, max_lines=3, overflow=ft.TextOverflow.ELLIPSIS,text_align=ft.TextAlign.CENTER, color=ft.colors.WHITE,width=200)
+    Likes = ft.Text(size=9, weight="bold", text_align=ft.TextAlign.CENTER, color=ft.colors.WHITE)
+    Views = ft.Text(size=9, weight="bold", text_align=ft.TextAlign.CENTER, color=ft.colors.WHITE)
 
-    
     listado_canciones = ft.Container(
         alignment=ft.alignment.center,
         width=400, 
-        height=500, 
+        height=585, 
         adaptive= False,
     )
-    fila_busqueda = ft.Row(controls=[Busqueda], alignment=ft.MainAxisAlignment.CENTER)
+    fila_busqueda = ft.Row(controls=[Busqueda], alignment=ft.MainAxisAlignment.CENTER,width=600)
     fila_titulo = ft.Row(controls=[song_info], alignment=ft.MainAxisAlignment.CENTER)
     fila_controles = ft.Row(controls=[prev_button,play_button,stop_button, next_button], 
                       alignment=ft.MainAxisAlignment.CENTER,
@@ -278,28 +292,44 @@ async def main(page: ft.Page):
                         alignment=ft.MainAxisAlignment.END, spacing=20,
                         horizontal_alignment=ft.CrossAxisAlignment.END,
                                )
+    fila_info = ft.Row(controls=[Miniatura,Nombre],alignment=ft.MainAxisAlignment.CENTER, vertical_alignment=ft.CrossAxisAlignment.CENTER,spacing=2) 
+    fila_likeView = ft.Row(controls=[ft.Icon(ft.icons.THUMB_UP, color=ft.colors.WHITE, size=10), Likes, ft.Icon(ft.icons.VISIBILITY,color=ft.colors.WHITE,size=10) ,Views],spacing=6,alignment=ft.MainAxisAlignment.CENTER)
     fila_listado = ft.Row(controls=[listado_canciones], alignment=ft.MainAxisAlignment.CENTER, vertical_alignment=ft.CrossAxisAlignment.CENTER)
 
+    columna_info = ft.Column(controls=[fila_info, 
+                        ft.Row([fila_likeView],spacing=1)],
+                        alignment=ft.MainAxisAlignment.END, spacing=1,
+                        horizontal_alignment=ft.CrossAxisAlignment.START)
     columna_izquierda = ft.Container(content=ft.Text("Izquierda (vacío)"),bgcolor="#f0f0f0",expand=True)
     columna_derecha = ft.Container(content=ft.Text("Derecha (vacío)"),bgcolor="#f0f0f0", expand=True)
 
     fila_superior = ft.Row([columna_busqueda], alignment=ft.MainAxisAlignment.CENTER, vertical_alignment=ft.CrossAxisAlignment.START)
 
     page.add(fila_superior,fila_listado,
-             ft.Row([ft.Column([columna_reproductor],
-                    alignment=ft.MainAxisAlignment.END,
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    expand=False,
-                    ),
-                    ft.Column([columna_volume],
-                    alignment=ft.MainAxisAlignment.END,
-                    horizontal_alignment=ft.CrossAxisAlignment.END,
-                    expand=False,
-                    )],
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    vertical_alignment=ft.CrossAxisAlignment.END
-                    )
-    )
+             ft.Container(
+                ft.Row([ft.Column([columna_info],
+                        alignment=ft.MainAxisAlignment.END,
+                        horizontal_alignment=ft.CrossAxisAlignment.START,
+                        expand=False,
+                        ),
+                        ft.Column([columna_reproductor],
+                        alignment=ft.MainAxisAlignment.END,
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        expand=False,
+                        ),
+                        ft.Column([columna_volume],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        horizontal_alignment=ft.CrossAxisAlignment.END,
+                        expand=False,
+                        )],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        ),
+                bgcolor=ft.colors.BLACK87,
+                border_radius=ft.border_radius.all(8)
+                ),
+            )
+    
     if playlist.State:
         Actualizar()
         await update_progress()
