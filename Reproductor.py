@@ -24,6 +24,7 @@ async def main(page: ft.Page):
     player = None
     NuevaBusqueda = None
     Cancion = None
+    Listado = []
 
     #funciones
    
@@ -99,6 +100,8 @@ async def main(page: ft.Page):
         else:
            volume_button.icon = ft.icons.VOLUME_UP 
            player.audio_set_volume(100)
+           volume_slider.value = 1
+           
     
     def set_volume(e):
         global player
@@ -145,6 +148,10 @@ async def main(page: ft.Page):
                 return f"{num / 1_000:.1f}K"
         return str(num)
 
+    def CompletarPlaylist():
+        for cancion in playlist.State:
+            nuevaCancion = song.Song(cancion.Url)
+            Listado.append(nuevaCancion)
 
     def Buscar_Canciones(e):
         global NuevaBusqueda
@@ -250,7 +257,7 @@ async def main(page: ft.Page):
     song_info = ft.Text(size=20, color=ft.colors.WHITE)
     current_time_text = ft.Text(value="00:00", color=ft.colors.WHITE60)
     duration = ft.Text(color=ft.colors.WHITE60)
-    progress_bar = ft.ProgressBar(value=0.0, width=300, height=10, color="white", bgcolor="#263238")
+    progress_bar = ft.ProgressBar(value=0.0, width=300, height=10, color="white", bgcolor=ft.colors.GREY_900)
     progress_container = ft.Container(content=progress_bar,on_tap_down=update_progress_position,width=300, height=10)
     play_button = ft.IconButton(icon=ft.icons.PLAY_ARROW, on_click=play_Pause, icon_color=ft.colors.WHITE)
     next_button = ft.IconButton(icon=ft.icons.SKIP_NEXT, on_click= change_song,data=1, icon_color=ft.colors.WHITE)
@@ -324,9 +331,11 @@ async def main(page: ft.Page):
                         )],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        width= ft.Window.width
                         ),
                 bgcolor=ft.colors.BLACK87,
-                border_radius=ft.border_radius.all(8)
+                border_radius=ft.border_radius.all(8),
+                width=ft.Window.width
                 ),
             )
     
