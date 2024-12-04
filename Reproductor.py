@@ -3,10 +3,9 @@ import asyncio
 import objSong as song
 import Pantalla
 import ObjBusqueda as Bsq
-import objYouTube as Yt
 import objPlaylist as pl
+import objArtist as art
 import traceback
-from yt_dlp import YoutubeDL
 import vlc
 
 
@@ -24,6 +23,7 @@ async def main(page: ft.Page):
     player = None
     NuevaBusqueda = None
     Cancion = None
+    Artista = None
     Listado = []
 
     #funciones
@@ -153,11 +153,54 @@ async def main(page: ft.Page):
             nuevaCancion = song.Song(cancion.Url)
             Listado.append(nuevaCancion)
 
+    async def Buscar_Artista(busqueda):
+        global Artista
+        resultado = art.buscar_artista(busqueda)
+        Artista = resultado[0] 
+        resultado_artista.value = Artista.Nombre
+        artista_bio.value = ", ".join(Artista.Tag_List)
+        discography_button.visible = True
+        texto_Resultado.visible = True
+        page.update()
+
+    async def mostrar_discografia(e):
+        global Artista
+        Artista.Discografia = Artista.obtener_discografia_oficial()
+        Resultado_Discografia = ft.Column()
+        for album in Artista.Discografia:
+            columna_discografia = ft.Row(
+                controls=[
+                    ft.Image(src=album.Thumbnail, width=100, height=100, fit=ft.Image.fit),
+                    ft.Column(
+                        controls=[
+                            ft.Text(album.Title, size=16, weight="bold"),
+                            ft.Text(album.First_Release_Date, size=12)
+                        ],
+                        alignment=ft.MainAxisAlignment.START,
+                        spacing=2
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.START,
+                spacing=10
+            )
+            Resultado_Discografia.controls.append(columna_discografia)
+            listado_discografia.content=ft.Column(
+                                controls=[
+                                        ft.Row(
+                                                controls=[Resultado_Discografia],
+                                                alignment=ft.MainAxisAlignment.START
+                                            )
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            scroll=ft.ScrollMode.AUTO,
+        )
+        page.update()
+
     def Buscar_Canciones(e):
         global NuevaBusqueda
         NuevaBusqueda = Bsq.Busqueda(e.control.value)
         Resultado_Busqueda = ft.Column()
-
+        asyncio.run(Buscar_Artista(e.control.value))
         for index, row in NuevaBusqueda.Dataframe.iterrows():
             popup_menu = ft.PopupMenuButton(
             icon=ft.icons.MORE_VERT,
@@ -259,22 +302,31 @@ async def main(page: ft.Page):
     duration = ft.Text(color=ft.colors.WHITE60)
     progress_bar = ft.ProgressBar(value=0.0, width=300, height=10, color="white", bgcolor=ft.colors.GREY_900)
     progress_container = ft.Container(content=progress_bar,on_tap_down=update_progress_position,width=300, height=10)
+    discography_button = ft.TextButton("Ver Discografia",icon=ft.icons.MY_LIBRARY_MUSIC, on_click=mostrar_discografia, icon_color=ft.colors.WHITE, visible=False)
     play_button = ft.IconButton(icon=ft.icons.PLAY_ARROW, on_click=play_Pause, icon_color=ft.colors.WHITE)
     next_button = ft.IconButton(icon=ft.icons.SKIP_NEXT, on_click= change_song,data=1, icon_color=ft.colors.WHITE)
     prev_button = ft.IconButton(icon=ft.icons.SKIP_PREVIOUS, on_click=change_song, data=-1,icon_color=ft.colors.WHITE)
     stop_button = ft.IconButton(icon=ft.icons.STOP_CIRCLE, on_click=stop, icon_color=ft.colors.WHITE)
     volume_button = ft.IconButton(icon=ft.icons.VOLUME_UP, on_click=Mute,icon_color=ft.colors.WHITE)
     volume_slider = ft.Slider(min=0, max=1, value=1, divisions=10,width=200, on_change_end=set_volume,active_color=ft.colors.WHITE)
-    Busqueda = ft.TextField(label="Con qué te vas a deleitar?", hint_text="Escriba un artista o canción.", width=500 ,icon=ft.icons.SEARCH,on_submit=Buscar_Canciones)
+    Busqueda = ft.TextField(label="Con qué te vas a deleitar?",hint_text="Escriba un artista o canción.", width=500 ,icon=ft.icons.SEARCH,on_submit=Buscar_Canciones,text_align=ft.TextAlign.CENTER, border_radius=ft.border_radius.all(50))
     Miniatura = ft.Image(width=100, height=100,fit=ft.Image.left)
     Nombre = ft.Text(size=12, max_lines=3, overflow=ft.TextOverflow.ELLIPSIS,text_align=ft.TextAlign.CENTER, color=ft.colors.WHITE,width=200)
     Likes = ft.Text(size=9, weight="bold", text_align=ft.TextAlign.CENTER, color=ft.colors.WHITE)
     Views = ft.Text(size=9, weight="bold", text_align=ft.TextAlign.CENTER, color=ft.colors.WHITE)
+    resultado_artista = ft.Text(size=20, color=ft.colors.WHITE, width=250)
+    artista_bio = ft.Text(size=12, color=ft.colors.WHITE, max_lines=2,overflow=ft.TextOverflow.ELLIPSIS, width=300)
 
     listado_canciones = ft.Container(
         alignment=ft.alignment.center,
         width=400, 
         height=585, 
+        adaptive= False,
+    )
+    listado_discografia = ft.Container(
+        alignment=ft.alignment.center,
+        width=600, 
+        height=385, 
         adaptive= False,
     )
     fila_busqueda = ft.Row(controls=[Busqueda], alignment=ft.MainAxisAlignment.CENTER,width=600)
@@ -302,17 +354,60 @@ async def main(page: ft.Page):
     fila_info = ft.Row(controls=[Miniatura,Nombre],alignment=ft.MainAxisAlignment.CENTER, vertical_alignment=ft.CrossAxisAlignment.CENTER,spacing=2) 
     fila_likeView = ft.Row(controls=[ft.Icon(ft.icons.THUMB_UP, color=ft.colors.WHITE, size=10), Likes, ft.Icon(ft.icons.VISIBILITY,color=ft.colors.WHITE,size=10) ,Views],spacing=6,alignment=ft.MainAxisAlignment.CENTER)
     fila_listado = ft.Row(controls=[listado_canciones], alignment=ft.MainAxisAlignment.CENTER, vertical_alignment=ft.CrossAxisAlignment.CENTER)
-
+    fila_discografia = ft.Row(controls=[listado_discografia], alignment=ft.MainAxisAlignment.CENTER, vertical_alignment=ft.CrossAxisAlignment.CENTER)
+    texto_Resultado = ft.Text("Resultado Principal", size=16, color=ft.colors.WHITE, visible=False)
     columna_info = ft.Column(controls=[fila_info, 
                         ft.Row([fila_likeView],spacing=1)],
                         alignment=ft.MainAxisAlignment.END, spacing=1,
                         horizontal_alignment=ft.CrossAxisAlignment.START)
-    columna_izquierda = ft.Container(content=ft.Text("Izquierda (vacío)"),bgcolor="#f0f0f0",expand=True)
-    columna_derecha = ft.Container(content=ft.Text("Derecha (vacío)"),bgcolor="#f0f0f0", expand=True)
+    columna_izquierda = ft.Column(
+    controls=[
+        texto_Resultado,
+        resultado_artista, 
+        artista_bio,
+        discography_button
+                ],
+    expand=True,
+    width=500,
+    alignment= ft.MainAxisAlignment.CENTER,
+    horizontal_alignment=ft.CrossAxisAlignment.CENTER
+                )
+    columna_derecha = ft.Container(content=ft.Text("Derecha (vacío)"), expand=True,  width=500)
 
     fila_superior = ft.Row([columna_busqueda], alignment=ft.MainAxisAlignment.CENTER, vertical_alignment=ft.CrossAxisAlignment.START)
 
-    page.add(fila_superior,fila_listado,
+    page.add( fila_superior, ft.Container(
+        ft.Row(
+            [
+                ft.Column(
+                    [columna_izquierda, fila_discografia],  # columna_izquierda, 
+                    alignment=ft.MainAxisAlignment.START,
+                    horizontal_alignment=ft.CrossAxisAlignment.START,
+                    expand=False,
+                    width=500
+                ),
+                ft.Column(
+                    [fila_listado],  # Columna del medio
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    expand=True,
+                    width=500
+                ),
+                ft.Column(
+                    [columna_derecha],  # Columna de la derecha vacía
+                    alignment=ft.MainAxisAlignment.END,
+                    horizontal_alignment=ft.CrossAxisAlignment.END,
+                    expand=False,
+                    width=500
+                ),
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            width=ft.Window.width,
+        ),
+        border_radius=ft.border_radius.all(8),
+        width=ft.Window.width,
+    ),
              ft.Container(
                 ft.Row([ft.Column([columna_info],
                         alignment=ft.MainAxisAlignment.END,
@@ -346,5 +441,5 @@ async def main(page: ft.Page):
         song_info =  "No se encontraron canciones en la carpeta de canciones"
         page.update()
 
-ft.app(target=main)
+ft.app(target=main,view=ft.AppView.FLET_APP_HIDDEN)
 

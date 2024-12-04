@@ -1,6 +1,6 @@
 from yt_dlp import YoutubeDL
 
-ydl_opts = {'format': 'bestaudio'}
+ydl_opts = {'format': 'bestaudio'} #'bestaudio' 'bestvideo'
 
 class Song:
 
